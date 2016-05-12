@@ -1,42 +1,150 @@
 class Bouncer {
-  
+
   RVector location;
   RVector velocity;
+  int radius;
+  int countDown; 
 
   // constructor
   Bouncer() {
-    
-    location = new RVector(100, 100);
-    velocity = new RVector(1, 3.3);
+
+    reset(0);
+    radius = 8;
     
   }
-  
+
   // update position
   void update() {
+    
     // Move the ball according to it's speed
-    location.add(velocity);
+    if (countDown > 0) {
+      countDown -= 1;            // don't move until the countdown is at zero
+    } else {
+      location.add(velocity);
+    }
+    
   }
-  
+
   // show the object
   void display() {
-    // Visual characteristics of the ball
-    stroke(0);
-    fill(175);
-  
-    // Display the ball at the location (x, y)
-    ellipse(location.x, location.y, 16, 16);
-  }
-  
-  // check for edges
-  void checkEdges() {
     
+    // Visual characteristics of the ball
+    fill(0, 0, 90);
+
+    // Display the ball at the location (x, y)
+    ellipse(location.x, location.y, radius*2, radius*2);
+    
+  }
+
+  // reset position
+  void reset(float increment) {
+    
+    location = new RVector( width / 2, height / 16 * 11 );    // bottom middle of screen
+    velocity = new RVector(2 + increment, 2 + increment);     // speed is based on level
+    countDown = 60;                                           // how many frames to wait before moving
+    
+  }
+
+  // check for edges
+  int checkEdges() {
+
     // Bounce if needed
     if ((location.x > width) || (location.x < 0)) {
       velocity.x = velocity.x * -1;
     }
-    if ((location.y > height) || (location.y < 0)) {
+    if (location.y < 0) {
       velocity.y = velocity.y * -1;
+    }
+    if (location.y > height) {
+      return -1;  // death
+    } else {
+      return 0;  // still alive!
     }
     
   }
-}
+
+  // check for a collision with the paddle
+  void checkForPaddleCollision(Paddle paddle) {
+
+    // Check for 36 points around the circumference of the bouncer
+    for (int i = 0; i < 360; i += 10) {
+
+      float x = location.x + cos(radians(i))*radius; 
+      float y = location.y + sin(radians(i))*radius; 
+      RVector positionOnCircumference = new RVector(x, y);
+
+      // Look for a collision
+      if (positionOnCircumference.x > paddle.location.x &&
+        positionOnCircumference.x < paddle.location.x + paddle.size.x &&
+        positionOnCircumference.y > paddle.location.y &&
+        positionOnCircumference.y < paddle.location.y + paddle.size.y)
+      {
+
+        // Change direction based on bounce location and velocity
+        if (i > 0 && i < 180 && velocity.y > 0) {
+          
+          velocity.y *= -1;                // hit on bottom of ball when moving down on screen
+          
+        } else if (i > 270 && velocity.x > 0 || i < 90 && velocity.x > 0) {
+          
+          if (!(paddle.velocity.x > 0 && velocity.x > 0 || paddle.velocity.x < 0 && velocity.x < 0)) {
+            velocity.x *= -1;                // hit on right side of ball when moving right on screen
+          }
+          
+        } else if (i > 90 && i < 270 && velocity.x < 0) {
+          
+          if (!(paddle.velocity.x > 0 && velocity.x > 0 || paddle.velocity.x < 0 && velocity.x < 0)) {
+            velocity.x *= -1;                // hit on left side of ball when moving left on screen
+          }
+          
+        }
+        
+      }
+      
+    }
+    
+  }
+
+  // check for a collision with the block
+  int checkForBrickCollision(Brick brick) {
+
+    int pointsEarned = 0;
+
+    // Check for 36 points around the circumference of the bouncer
+    for (int i = 0; i < 360; i += 10) {
+
+      float x = location.x + cos(radians(i))*radius; 
+      float y = location.y + sin(radians(i))*radius; 
+      RVector positionOnCircumference = new RVector(x, y);
+
+      // Look for a collision
+      if (positionOnCircumference.x > brick.location.x &&
+        positionOnCircumference.x < brick.location.x + brick.size.x &&
+        positionOnCircumference.y > brick.location.y &&
+        positionOnCircumference.y < brick.location.y + brick.size.y &&
+        brick.active == true)
+      {
+
+        brick.active = false;
+        pointsEarned += brick.value;
+
+        // Change direction based on bounce location and velocity
+        if (i > 180 && velocity.y < 0) {
+          velocity.y *= -1;                // hit on top of ball when moving up on screen
+        } else if (i > 90 && i < 270 && velocity.x < 0) {
+          velocity.x *= -1;                // hit on left side of ball when moving left on screen
+        } else if (i > 0 && i < 180 && velocity.y > 0) {
+          velocity.y *= -1;                // hit on bottom of ball when moving down on screen
+        } else if (i > 270 && velocity.x > 0 || i < 90 && velocity.x > 0) {
+          velocity.x *= -1;                // hit on right side of ball when moving right on screen
+        }
+        
+      }
+      
+    }
+
+    return pointsEarned;
+    
+  }
+  
+} 
